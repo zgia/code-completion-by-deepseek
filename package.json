@@ -1,0 +1,184 @@
+{
+  "name": "code-completion-by-ai",
+  "displayName": "Code Completion by AI",
+  "description": "Inline code completion using DeepSeek FIM or OpenAI Chat Completions.",
+  "version": "0.1.5",
+  "publisher": "zgia",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "icon": "images/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "zgia.CodeCompletion.setApiKey",
+        "title": "Code Completion: 设置 API Key"
+      },
+      {
+        "command": "zgia.CodeCompletion.clearApiKey",
+        "title": "Code Completion: 清除 API Key"
+      },
+      {
+        "command": "zgia.CodeCompletion.switchProvider",
+        "title": "Code Completion: 切换服务商"
+      }
+    ],
+    "configuration": {
+      "title": "Code Completion",
+      "properties": {
+        "zgia.CodeCompletion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用行内代码补全。"
+        },
+        "zgia.CodeCompletion.model": {
+          "type": "string",
+          "default": "deepseek-flash",
+          "description": "旧版 DeepSeek FIM 模型设置，仅对 DeepSeek 生效。",
+          "deprecationMessage": "请使用 zgia.CodeCompletion.deepseek.model；未配置新设置时仍兼容此设置。"
+        },
+        "zgia.CodeCompletion.languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": [
+            "php",
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "vue",
+            "json",
+            "jsonc"
+          ],
+          "description": "启用补全的 VS Code 语言 ID。设置为 [\"*\"] 表示所有语言，空数组表示不在任何语言中请求补全。"
+        },
+        "zgia.CodeCompletion.debounceMs": {
+          "type": "integer",
+          "default": 200,
+          "minimum": 0,
+          "maximum": 2000,
+          "description": "停止输入后等待多少毫秒再请求补全。"
+        },
+        "zgia.CodeCompletion.timeoutMs": {
+          "type": "integer",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "补全请求的超时时间（毫秒）。"
+        },
+        "zgia.CodeCompletion.maxTokens": {
+          "type": "integer",
+          "default": 128,
+          "minimum": 16,
+          "maximum": 1024,
+          "description": "每次补全最多生成的 token 数。"
+        },
+        "zgia.CodeCompletion.maxLines": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "每次补全最多展示的代码行数。"
+        },
+        "zgia.CodeCompletion.provider": {
+          "type": "string",
+          "enum": [
+            "deepseek",
+            "openai"
+          ],
+          "enumDescriptions": [
+            "DeepSeek 原生 FIM 补全",
+            "OpenAI Chat Completions 补全"
+          ],
+          "default": "deepseek",
+          "scope": "resource",
+          "description": "当前补全服务商。修改后立即生效，也可通过“切换服务商”命令选择。"
+        },
+        "zgia.CodeCompletion.deepseek.model": {
+          "type": "string",
+          "default": "deepseek-flash",
+          "scope": "resource",
+          "description": "deepseek 模型名称。显式设置优先于 DEEPSEEK_MODEL，留空使用环境变量或默认值。必须支持 FIM。"
+        },
+        "zgia.CodeCompletion.deepseek.baseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com/beta",
+          "scope": "resource",
+          "description": "deepseek 接口基础地址。扩展自动追加 /completions。显式设置优先于 DEEPSEEK_BASE_URL，留空使用环境变量或官方地址。"
+        },
+        "zgia.CodeCompletion.openai.model": {
+          "type": "string",
+          "default": "gpt-6.1-sol",
+          "scope": "resource",
+          "description": "openai 模型名称。显式设置优先于 OPENAI_MODEL，留空使用环境变量或默认值。必须支持 Chat Completions；默认 gpt-6.1-sol。推理模型可能需要更大的 maxTokens。"
+        },
+        "zgia.CodeCompletion.openai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "scope": "resource",
+          "description": "openai 接口基础地址。扩展自动追加 /chat/completions。显式设置优先于 OPENAI_BASE_URL，留空使用环境变量或官方地址。"
+        },
+        "zgia.CodeCompletion.openai.reasoningEffort": {
+          "type": "string",
+          "enum": [
+            "default",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "enumDescriptions": [
+            "使用模型默认推理强度，不发送 reasoning_effort 参数",
+            "不使用推理（仅限支持的模型）",
+            "最小推理投入（仅限支持的模型）",
+            "轻度推理",
+            "中度推理",
+            "高度推理",
+            "更高推理投入",
+            "最大推理投入"
+          ],
+          "default": "default",
+          "scope": "resource",
+          "description": "OpenAI 推理强度。显式设置优先于 OPENAI_REASONING_EFFORT；default 沿用模型默认值。仅对 OpenAI 生效，所选模型须支持该强度。gpt-6.1-sol 支持 low、medium、high、xhigh、max；轻度对应 low。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "lint": "eslint src test eslint.config.mjs --max-warnings=0",
+    "lint:fix": "npm run lint -- --fix",
+    "watch": "tsc -p . --watch",
+    "test": "npm run compile && node --test test/*.test.js",
+    "vscode:prepublish": "npm run lint && npm run compile",
+    "package:vsix": "npm test && vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@stylistic/eslint-plugin": "^4.4.1",
+    "@types/node": "^22.15.17",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "@vscode/vsce": "^4.0.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "typescript": "5.9.3"
+  },
+  "allowScripts": {
+    "@vscode/vsce-sign@2.1.0": true
+  }
+}
